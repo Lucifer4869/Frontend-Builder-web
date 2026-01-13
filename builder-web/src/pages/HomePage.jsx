@@ -1,8 +1,7 @@
 import React, { useRef, useState, Suspense, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Environment, Html } from '@react-three/drei';
-import { Phone, Mail, X, ChevronRight, Home, Building, Waves, Hotel, MessageCircle, Sun, Moon } from 'lucide-react';
-import * as THREE from 'three';
+import { Environment } from '@react-three/drei';
+import { Phone, Mail, X, ChevronRight, Home, Building, Waves, Hotel, MessageCircle } from 'lucide-react';
 
 // --- Tree Component ---
 const Tree = ({ position, scale = 1 }) => {
@@ -40,73 +39,17 @@ const Bush = ({ position, scale = 1 }) => {
   );
 };
 
-// --- Hotspot Component ---
-const Hotspot = ({ position, label, onClick, color = "#ea580c", isActive = false }) => {
-  const [hovered, setHovered] = useState(false);
-  const meshRef = useRef();
-  const ringRef = useRef();
-
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 3) * 0.15);
-    }
-    if (ringRef.current) {
-      ringRef.current.rotation.z = state.clock.elapsedTime * 0.5;
-    }
-  });
-
-  const handleClick = (e) => {
-    if (e) e.stopPropagation();
-    onClick();
-  };
-  
-  return (
-    <group position={position}>
-      <mesh
-        ref={meshRef}
-        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
-        onPointerOut={(e) => { e.stopPropagation(); setHovered(false); document.body.style.cursor = 'grab'; }}
-        onClick={handleClick}
-      >
-        <sphereGeometry args={[0.25, 16, 16]} />
-        <meshStandardMaterial 
-          color={isActive ? "#fff" : (hovered ? "#fff" : color)}
-          emissive={color}
-          emissiveIntensity={isActive ? 1.5 : (hovered ? 1.2 : 0.6)}
-          transparent
-          opacity={0.9}
-        />
-      </mesh>
-      {/* Outer ring effect */}
-      <mesh ref={ringRef} scale={1.8}>
-        <ringGeometry args={[0.15, 0.2, 32]} />
-        <meshBasicMaterial color={color} transparent opacity={isActive ? 0.8 : 0.5} side={THREE.DoubleSide} />
-      </mesh>
-      <Html center distanceFactor={10}>
-        <div 
-          onClick={handleClick}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-300 cursor-pointer select-none
-          ${isActive ? 'bg-orange-600 text-white scale-110 shadow-xl' : 
-            (hovered ? 'bg-orange-600 text-white scale-110' : 'bg-white/95 text-slate-800 shadow-lg border border-slate-100 hover:bg-orange-100')}`}
-        >
-          {label}
-        </div>
-      </Html>
-    </group>
-  );
-};
-
-// --- Modern House with Mouse Rotation ---
-const ModernHouse = ({ onHotspotClick, activePanel, isDark }) => {
+// --- Modern House with Mouse Rotation (Updated: Removed Hotspots) ---
+const ModernHouse = ({ isDark }) => {
   const group = useRef();
   const { gl } = useThree();
   
   // Mouse drag state
   const isDragging = useRef(false);
   const previousMousePosition = useRef({ x: 0, y: 0 });
-  const targetRotation = useRef({ x: 0.25, y: 0.5 }); // Default to slightly tilted down view
+  const targetRotation = useRef({ x: 0.25, y: 0.5 });
   const currentRotation = useRef({ x: 0.25, y: 0.5 });
-  const baseY = useRef(-1.2); // Store the base Y position for floating animation
+  const baseY = useRef(-1.2);
 
   // Mouse event handlers
   const handlePointerDown = useCallback((e) => {
@@ -130,14 +73,11 @@ const ModernHouse = ({ onHotspotClick, activePanel, isDark }) => {
     targetRotation.current.y += deltaX * 0.005;
     targetRotation.current.x += deltaY * 0.003;
     
-    // Clamp vertical rotation - allow more range for straight-on view
-    // Min 0.0 (looking straight on) to Max 0.5 (looking down at angle)
     targetRotation.current.x = Math.max(0.0, Math.min(0.5, targetRotation.current.x));
     
     previousMousePosition.current = { x: e.clientX, y: e.clientY };
   }, []);
 
-  // Add event listeners
   React.useEffect(() => {
     const canvas = gl.domElement;
     canvas.style.cursor = 'grab';
@@ -156,14 +96,12 @@ const ModernHouse = ({ onHotspotClick, activePanel, isDark }) => {
   useFrame(() => {
     if (!group.current) return;
     
-    // Smooth rotation interpolation
     currentRotation.current.x += (targetRotation.current.x - currentRotation.current.x) * 0.08;
     currentRotation.current.y += (targetRotation.current.y - currentRotation.current.y) * 0.08;
     
     group.current.rotation.x = currentRotation.current.x;
     group.current.rotation.y = currentRotation.current.y;
     
-    // Gentle floating animation - use baseY from ref to avoid overriding initial position
     group.current.position.y = baseY.current + Math.sin(Date.now() * 0.001) * 0.05;
   });
 
@@ -225,7 +163,7 @@ const ModernHouse = ({ onHotspotClick, activePanel, isDark }) => {
           <meshStandardMaterial color="#F5F5F5" />
         </mesh>
         
-        {/* Windows Floor 1 - Warm light in dark mode */}
+        {/* Windows Floor 1 */}
         <mesh position={[-1.2, 0.2, 1.76]}>
           <boxGeometry args={[0.8, 1.2, 0.06]} />
           <meshStandardMaterial 
@@ -257,7 +195,7 @@ const ModernHouse = ({ onHotspotClick, activePanel, isDark }) => {
           <meshStandardMaterial color="#FFD54F" metalness={0.8} />
         </mesh>
         
-        {/* Window Floor 2 - Warm light in dark mode */}
+        {/* Window Floor 2 */}
         <mesh position={[0.3, 2.2, 1.61]}>
           <boxGeometry args={[2, 1, 0.06]} />
           <meshStandardMaterial 
@@ -278,22 +216,6 @@ const ModernHouse = ({ onHotspotClick, activePanel, isDark }) => {
           <boxGeometry args={[2.5, 0.5, 0.06]} />
           <meshStandardMaterial color="#E0E0E0" transparent opacity={0.6} />
         </mesh>
-
-        {/* Hotspots */}
-        <Hotspot 
-          position={[0, 0, 2.5]} 
-          label="💬 Line Official"
-          onClick={() => onHotspotClick('line')}
-          color="#22c55e"
-          isActive={activePanel === 'line'}
-        />
-        <Hotspot 
-          position={[1.5, 0.5, 2.3]} 
-          label="📞 ติดต่อเรา"
-          onClick={() => onHotspotClick('contact')}
-          color="#ea580c"
-          isActive={activePanel === 'contact'}
-        />
       </group>
 
       {/* ===== ROOF ===== */}
@@ -310,14 +232,6 @@ const ModernHouse = ({ onHotspotClick, activePanel, isDark }) => {
           <boxGeometry args={[2.8, 0.18, 2.4]} />
           <meshStandardMaterial color="#3E2723" />
         </mesh>
-        
-        <Hotspot 
-          position={[0, 1.5, 0]} 
-          label="🏠 ดูแบบบ้าน"
-          onClick={() => onHotspotClick('houses')}
-          color="#3b82f6"
-          isActive={activePanel === 'houses'}
-        />
       </group>
 
       {/* ===== TREES & BUSHES ===== */}
@@ -334,7 +248,42 @@ const ModernHouse = ({ onHotspotClick, activePanel, isDark }) => {
   );
 };
 
-// --- Info Panel (Toggle, not dialog) ---
+// --- Bottom Menu Component (New!) ---
+const BottomMenu = ({ activePanel, onButtonClick }) => {
+  const buttons = [
+    { id: 'houses', label: 'แบบบ้าน', icon: <Home size={18} />, color: 'bg-blue-500', shadow: 'shadow-blue-500/30' },
+    { id: 'line', label: 'Line Official', icon: <MessageCircle size={18} />, color: 'bg-green-500', shadow: 'shadow-green-500/30' },
+    { id: 'contact', label: 'ติดต่อเรา', icon: <Phone size={18} />, color: 'bg-orange-500', shadow: 'shadow-orange-500/30' },
+  ];
+
+  return (
+    <div className="fixed bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-50 w-auto">
+      <div className="flex items-center gap-3 p-2.5 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl">
+        {buttons.map((btn) => {
+          const isActive = activePanel === btn.id;
+          return (
+            <button
+              key={btn.id}
+              onClick={() => onButtonClick(btn.id)}
+              className={`
+                relative flex items-center gap-2 px-4 md:px-5 py-2.5 rounded-xl font-bold text-sm md:text-base text-white 
+                transition-all duration-300 transform
+                ${isActive ? `${btn.color} scale-105 shadow-lg ${btn.shadow} ring-2 ring-white/50` : 'hover:bg-white/10 hover:scale-105'}
+              `}
+            >
+              {btn.icon}
+              <span className="hidden md:inline">{btn.label}</span>
+              {/* Tooltip for mobile where text is hidden (Optional) */}
+              <span className="md:hidden">{btn.label}</span> 
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- Info Panel (Same as before) ---
 const InfoPanel = ({ type, isVisible, onClose }) => {
   const content = {
     line: {
@@ -500,10 +449,9 @@ const HeroContent = ({ isDark }) => {
 const HomePage = ({ isDark }) => {
   const [activePanel, setActivePanel] = useState(null);
 
-  const handleHotspotClick = useCallback((type) => {
-    // Toggle: if same panel clicked, close it
+  const handleToggle = (type) => {
     setActivePanel(prev => prev === type ? null : type);
-  }, []);
+  };
 
   const handleClosePanel = useCallback(() => {
     setActivePanel(null);
@@ -515,52 +463,40 @@ const HomePage = ({ isDark }) => {
 
   return (
     <>
-
       {/* Background Gradient - Theme aware */}
       <div className="fixed inset-0 w-full h-full transition-all duration-700" style={{ 
         background: isDark ? darkBg : lightBg,
         zIndex: -1 
       }}></div>
       
-      {/* Decorative Elements - Theme aware */}
+      {/* Decorative Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none transition-all duration-700" style={{ zIndex: -1 }}>
         {isDark ? (
           <>
-            {/* Aurora/Northern Lights effect - no hard edge */}
             <div className="absolute top-0 left-0 right-0 h-[500px]">
               <div className="absolute -top-20 left-1/4 w-[700px] h-[400px] bg-gradient-to-b from-emerald-500/25 via-cyan-400/15 to-transparent rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }}></div>
               <div className="absolute top-0 right-1/4 w-[600px] h-[350px] bg-gradient-to-b from-violet-500/20 via-fuchsia-400/10 to-transparent rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }}></div>
               <div className="absolute -top-10 left-1/2 w-[500px] h-[300px] bg-gradient-to-b from-teal-400/15 via-green-300/8 to-transparent rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '5s', animationDelay: '2s' }}></div>
             </div>
-            {/* Stars effect for dark mode */}
             <div className="absolute top-10 left-1/4 w-1 h-1 bg-white rounded-full opacity-60"></div>
             <div className="absolute top-20 left-1/3 w-1.5 h-1.5 bg-white rounded-full opacity-40"></div>
             <div className="absolute top-32 right-1/4 w-1 h-1 bg-white rounded-full opacity-70"></div>
             <div className="absolute top-16 right-1/3 w-2 h-2 bg-white rounded-full opacity-30"></div>
             <div className="absolute top-40 left-1/2 w-1.5 h-1.5 bg-white rounded-full opacity-50"></div>
-            <div className="absolute top-60 left-[15%] w-1 h-1 bg-white rounded-full opacity-40"></div>
-            <div className="absolute top-50 right-[20%] w-1.5 h-1.5 bg-white rounded-full opacity-60"></div>
-            {/* Moon glow */}
             <div className="absolute -top-20 right-1/4 w-[400px] h-[400px] bg-indigo-500/20 rounded-full blur-[120px]"></div>
-            {/* Ground glow */}
             <div className="absolute bottom-0 left-0 right-0 h-40 bg-linear-to-t from-slate-900/50 to-transparent"></div>
           </>
         ) : (
           <>
-            {/* Sun glow effect */}
             <div className="absolute -top-40 right-1/4 w-[500px] h-[500px] bg-amber-300/40 rounded-full blur-[100px]"></div>
-            {/* Cloud shapes */}
             <div className="absolute top-20 left-20 w-40 h-20 bg-white/50 rounded-full blur-xl"></div>
             <div className="absolute top-32 left-40 w-32 h-16 bg-white/40 rounded-full blur-xl"></div>
-            <div className="absolute top-16 right-40 w-48 h-24 bg-white/40 rounded-full blur-xl"></div>
-            <div className="absolute top-28 right-60 w-36 h-18 bg-white/30 rounded-full blur-xl"></div>
-            {/* Ground reflection */}
             <div className="absolute bottom-0 left-0 right-0 h-32 bg-linear-to-t from-amber-100/50 to-transparent"></div>
           </>
         )}
       </div>
 
-      {/* 3D Canvas - transparent to show gradient behind */}
+      {/* 3D Canvas */}
       <div className="fixed inset-0 w-full h-screen" style={{ zIndex: 0 }}>
         <Canvas 
           shadows 
@@ -569,7 +505,6 @@ const HomePage = ({ isDark }) => {
           style={{ background: 'transparent' }}
         >
           <Suspense fallback={null}>
-            
             <ambientLight intensity={isDark ? 0.4 : 0.6} />
             <directionalLight 
               position={[8, 12, 8]} 
@@ -581,35 +516,24 @@ const HomePage = ({ isDark }) => {
             <directionalLight position={[-5, 5, -5]} intensity={isDark ? 0.2 : 0.3} />
             <hemisphereLight intensity={isDark ? 0.3 : 0.4} groundColor="#8d7c5c" />
             
-            {/* Environment only for lighting reflections, not as visible background */}
             <Environment preset={isDark ? "night" : "sunset"} background={false} />
 
-            <ModernHouse 
-              onHotspotClick={handleHotspotClick}
-              activePanel={activePanel}
-              isDark={isDark}
-            />
+            {/* ModernHouse (No Hotspots passed) */}
+            <ModernHouse isDark={isDark} />
           </Suspense>
         </Canvas>
       </div>
 
-      {/* Hero Content - Left Side */}
+      {/* UI Elements */}
       <HeroContent isDark={isDark} />
+      
+      {/* Bottom Menu (New Position for Buttons) */}
+      <BottomMenu activePanel={activePanel} onButtonClick={handleToggle} />
 
-      {/* Info Panels - Toggle on hotspot click */}
+      {/* Info Panels */}
       <InfoPanel 
-        type="line" 
-        isVisible={activePanel === 'line'} 
-        onClose={handleClosePanel}
-      />
-      <InfoPanel 
-        type="contact" 
-        isVisible={activePanel === 'contact'} 
-        onClose={handleClosePanel}
-      />
-      <InfoPanel 
-        type="houses" 
-        isVisible={activePanel === 'houses'} 
+        type={activePanel} 
+        isVisible={!!activePanel} 
         onClose={handleClosePanel}
       />
     </>
