@@ -3,7 +3,7 @@ import { Phone, Mail, MapPin, Facebook, MessageCircle } from 'lucide-react';
 
 const Footer = () => {
   return (
-    <footer className="bg-slate-900 text-white relative z-50 min-h-screen">
+    <footer className="bg-slate-900 text-white relative z-50">
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">

@@ -48,14 +48,14 @@ function App() {
         <Route path="/" element={<HomePage isDark={isDark} />} />
         
         {/* หน้าอื่นๆ */}
-        <Route path="/services" element={<ServicesPage />} />
-        <Route path="/portfolio" element={<PortfolioPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/services" element={<ServicesPage isDark={isDark} />} />
+        <Route path="/portfolio" element={<PortfolioPage isDark={isDark} />} />
+        <Route path="/about" element={<AboutPage isDark={isDark} />} />
+        <Route path="/contact" element={<ContactPage isDark={isDark} />} />
       </Routes>
       
-      {/* แสดง Footer เฉพาะหน้าที่ไม่ใช่หน้าแรก (หน้าแรกมี Footer อยู่ใน ScrollControls แล้ว) */}
-      {!isHomePage && <Footer />}
+      {/* แสดง Footer เฉพาะหน้าที่ไม่ใช่หน้าแรกและหน้า Services (มี Footer อยู่ใน scroll container แล้ว) */}
+      {!isHomePage && location.pathname !== '/services' && <Footer />}
     </div>
   );
 }

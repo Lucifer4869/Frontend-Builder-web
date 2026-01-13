@@ -72,7 +72,7 @@ const projects = [
 
 const categories = ['ทั้งหมด', 'บ้าน', 'รีสอร์ท', 'บ้านลอยน้ำ', 'อาคารพาณิชย์'];
 
-const PortfolioPage = () => {
+const PortfolioPage = ({ isDark = false }) => {
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
   const [selectedProject, setSelectedProject] = useState(null);
 
@@ -81,17 +81,17 @@ const PortfolioPage = () => {
     : projects.filter(p => p.category === selectedCategory);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className={`min-h-screen transition-colors duration-500 ${isDark ? 'bg-slate-900' : 'bg-gradient-to-b from-slate-50 to-slate-100'}`}>
       {/* Hero Section */}
       <section className="pt-32 pb-12 px-6">
         <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-block bg-orange-100 text-orange-800 px-4 py-2 rounded-full text-sm font-bold mb-6">
+          <div className={`inline-block px-4 py-2 rounded-full text-sm font-bold mb-6 ${isDark ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-orange-100 text-orange-800'}`}>
             🏗️ ผลงานของเรา
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">
+          <h1 className={`text-4xl md:text-5xl font-bold mb-6 ${isDark ? 'text-white' : 'text-slate-900'}`}>
             โครงการที่<span className="text-orange-600">ภาคภูมิใจ</span>
           </h1>
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+          <p className={`text-xl max-w-2xl mx-auto ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             รวมผลงานการสร้างบ้าน รีสอร์ท และอาคารที่เราได้ส่งมอบให้ลูกค้า
           </p>
         </div>
@@ -108,7 +108,9 @@ const PortfolioPage = () => {
                 className={`px-6 py-2 rounded-full font-medium transition-all ${
                   selectedCategory === cat
                     ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/30'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 shadow-sm'
+                    : isDark 
+                      ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      : 'bg-white text-slate-600 hover:bg-slate-100 shadow-sm'
                 }`}
               >
                 {cat}
@@ -155,7 +157,7 @@ const PortfolioPage = () => {
       {selectedProject && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setSelectedProject(null)}>
           <div 
-            className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className={`rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto ${isDark ? 'bg-slate-800' : 'bg-white'}`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className={`h-64 bg-gradient-to-br ${selectedProject.color} rounded-t-3xl relative`}>
@@ -173,21 +175,21 @@ const PortfolioPage = () => {
             </div>
             
             <div className="p-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">{selectedProject.title}</h2>
-              <p className="text-slate-600 mb-6">{selectedProject.description}</p>
+              <h2 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>{selectedProject.title}</h2>
+              <p className={`mb-6 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{selectedProject.description}</p>
               
               <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-slate-50 p-4 rounded-xl text-center">
-                  <div className="text-sm text-slate-500 mb-1">พื้นที่</div>
-                  <div className="font-bold text-slate-900">{selectedProject.size}</div>
+                <div className={`p-4 rounded-xl text-center ${isDark ? 'bg-slate-700' : 'bg-slate-50'}`}>
+                  <div className={`text-sm mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>พื้นที่</div>
+                  <div className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{selectedProject.size}</div>
                 </div>
-                <div className="bg-slate-50 p-4 rounded-xl text-center">
-                  <div className="text-sm text-slate-500 mb-1">งบประมาณ</div>
-                  <div className="font-bold text-slate-900">{selectedProject.budget}</div>
+                <div className={`p-4 rounded-xl text-center ${isDark ? 'bg-slate-700' : 'bg-slate-50'}`}>
+                  <div className={`text-sm mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>งบประมาณ</div>
+                  <div className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{selectedProject.budget}</div>
                 </div>
-                <div className="bg-slate-50 p-4 rounded-xl text-center">
-                  <div className="text-sm text-slate-500 mb-1">สถานที่</div>
-                  <div className="font-bold text-slate-900">{selectedProject.location}</div>
+                <div className={`p-4 rounded-xl text-center ${isDark ? 'bg-slate-700' : 'bg-slate-50'}`}>
+                  <div className={`text-sm mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>สถานที่</div>
+                  <div className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{selectedProject.location}</div>
                 </div>
               </div>
               
@@ -200,7 +202,7 @@ const PortfolioPage = () => {
       )}
 
       {/* CTA Section */}
-      <section className="py-16 px-6 bg-slate-900">
+      <section className={`py-16 px-6 ${isDark ? 'bg-slate-800' : 'bg-slate-900'}`}>
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
             ต้องการดูแบบบ้านเพิ่มเติม?
