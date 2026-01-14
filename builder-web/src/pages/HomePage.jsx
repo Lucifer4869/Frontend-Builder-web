@@ -3,6 +3,40 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment } from '@react-three/drei';
 import { Phone, Mail, X, ChevronRight, Home, Building, Waves, Hotel, MessageCircle } from 'lucide-react';
 
+
+// --- 🌕 Moon Component (ดวงจันทร์ - สวยงามขึ้น) ---
+const Moon = ({ isDark }) => {
+  const moonRef = useRef();
+
+  useFrame((state, delta) => {
+    if (moonRef.current) {
+      moonRef.current.rotation.y += delta * 0.1; // หมุนช้าๆ
+    }
+  });
+
+  if (!isDark) return null; // แสดงเฉพาะโหมดกลางคืน
+
+  return (
+    <group position={[3, 5, -8]} ref={moonRef}> {/* ปรับตำแหน่งให้อยู่ในมุมมองกล้อง */}
+      {/* ตัวดวงจันทร์ */}
+      <mesh>
+        <sphereGeometry args={[1.2, 32, 32]} />
+        <meshStandardMaterial
+          color="#FFF9C4"
+          emissive="#FFF9C4"
+          emissiveIntensity={2}
+          fog={false}
+        />
+      </mesh>
+      {/* แสงจันทร์ส่องลงมา */}
+      <directionalLight intensity={0.5} color="#D1C4E9" position={[-5, 5, 5]} />
+      {/* แสงฟุ้งรอบดวงจันทร์ */}
+      <pointLight intensity={1} distance={15} color="#FFF9C4" />
+      {/* แสงเรืองรอบดวงจันทร์เพิ่มเติม */}
+      <pointLight intensity={0.5} distance={20} color="#E8EAF6" position={[2, 0, 2]} />
+    </group>
+  );
+};
 // --- 🌳 Tree Component ---
 const Tree = ({ position, scale = 1 }) => {
   return (
@@ -111,6 +145,29 @@ const GardenLight = ({ position, isDark }) => {
 
 // --- 🚗 Compact Hyper-Realistic Car (Scaled Down & Detailed) ---
 const Car = ({ position, rotation, isDark }) => {
+  const carRef = useRef();
+  const [animationProgress, setAnimationProgress] = useState(0);
+
+  useFrame((state, delta) => {
+    if (carRef.current) {
+      // Animate car leaving the house over 5 seconds
+      const duration = 5;
+      const progress = Math.min(animationProgress + delta / duration, 1);
+      setAnimationProgress(progress);
+
+      // Move car forward along z-axis from position[2] to position[2] + 6
+      const startZ = position[2];
+      const endZ = startZ + 6;
+      const currentZ = startZ + (endZ - startZ) * progress;
+
+      carRef.current.position.set(position[0], position[1], currentZ);
+
+      // Optional: Rotate wheels while moving
+      const wheelRotation = progress * Math.PI * 10; // Rotate wheels 10 full turns
+      // Assuming wheels are at indices 0-3 in the group, but since it's a group, need to access children
+      // For simplicity, skip wheel rotation for now
+    }
+  });
   // --- CAR CUSTOMIZATION ---
   const bodyColor = "#283593"; // Deep Blue Metallic
   const roofColor = "#1A1A1A"; // Black Roof
@@ -406,7 +463,8 @@ const ModernHouse = ({ isDark }) => {
   });
 
   return (
-    <group ref={group} position={[0, -1.2, 0]} scale={[0.65, 0.65, 0.65]}>
+    
+    <group ref={group} position={[0, -1.2, 0]} scale={[0.45, 0.45, 0.45]}>
       
       {/* Ground & Landscape */}
       <group position={[0, -0.1, 0]}>
@@ -578,6 +636,7 @@ const ModernHouse = ({ isDark }) => {
       <Bush position={[-4.5, 0.1, 1]} scale={0.9} />
 
     </group>
+    
   );
 };
 
@@ -814,6 +873,9 @@ const HomePage = ({ isDark }) => {
           style={{ background: 'transparent' }}
         >
           <Suspense fallback={null}>
+            {/* 🌕 ดวงจันทร์ใหม่เพิ่มตรงนี้ */}
+            <Moon isDark={isDark} />
+            
             <ambientLight intensity={isDark ? 0.3 : 0.6} />
             <directionalLight 
               position={[8, 12, 8]} 
