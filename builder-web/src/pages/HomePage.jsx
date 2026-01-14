@@ -1,42 +1,190 @@
-import React, { useRef, useState, Suspense, useCallback, useEffect } from 'react';
+import React, { useRef, useState, Suspense, useCallback, useEffect, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment } from '@react-three/drei';
 import { Phone, Mail, X, ChevronRight, Home, Building, Waves, Hotel, MessageCircle } from 'lucide-react';
+import * as THREE from 'three'; // ⬅️ เพิ่ม import นี้
 
-
-// --- 🌕 Moon Component (ดวงจันทร์ - สวยงามขึ้น) ---
 const Moon = ({ isDark }) => {
   const moonRef = useRef();
+  const cloudsRef = useRef();
 
-  useFrame((state, delta) => {
+  // ใช้แทน state สำหรับ animation
+  const starTimeRef = useRef(0);
+
+  // vector ใช้ซ้ำ
+  const normalVector = useMemo(() => new THREE.Vector3(), []);
+
+  // ---------- STATIC DATA ----------
+  const moonData = useMemo(() => {
+    const craters = Array.from({ length: 25 }, (_, i) => ({
+      id: i,
+      phi: Math.acos(2 * (i / 25) - 1),
+      theta: (i / 25) * Math.PI * 2,
+      radius: 0.08 + Math.random() * 0.15,
+      depth: 0.05 + Math.random() * 0.1,
+      rimHeight: 0.02 + Math.random() * 0.03,
+      offset: new THREE.Vector3(
+        (Math.random() - 0.5) * 0.3,
+        (Math.random() - 0.5) * 0.3,
+        (Math.random() - 0.5) * 0.3
+      ),
+    }));
+
+    const mountains = Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      phi: Math.acos(2 * ((i + 3) / 15) - 1),
+      theta: 2 * Math.PI * ((i * 0.7) % 1),
+      radius: 0.2 + (i / 12) * 0.4,
+      height: 0.1 + (i / 12) * 0.3,
+    }));
+
+    const maria = Array.from({ length: 6 }, (_, i) => ({
+      id: i,
+      phi: Math.acos(2 * ((i + 5) / 11) - 1),
+      theta: 2 * Math.PI * ((i + 2) / 9),
+      radius: 0.3 + (i / 6) * 0.8,
+    }));
+
+    const stars = Array.from({ length: 50 }, (_, i) => ({
+      id: i,
+      distance: 8 + (i / 50) * 8,
+      phi: Math.acos(2 * ((i / 50) % 1) - 1),
+      theta: 2 * Math.PI * ((i * 0.618) % 1),
+      scale: 0.03 + (i % 15) * 0.02,
+      opacity: 0.2 + (i % 10) * 0.15,
+      intensity: 0.3 + (i % 8) * 0.2,
+      twinkleSpeed: 0.5 + Math.random() * 2,
+    }));
+
+    const clouds = Array.from({ length: 8 }, (_, i) => ({
+      id: i,
+      distance: 12 + (i / 8) * 5,
+      phi: Math.acos(2 * ((i * 0.382) % 1) - 1),
+      theta: 2 * Math.PI * ((i * 0.5) % 1),
+      scale: [
+        0.4 + (i % 4) * 0.35,
+        0.15 + (i % 3) * 0.2,
+        0.4 + (i % 5) * 0.3,
+      ],
+      opacity: 0.03 + (i % 5) * 0.02,
+      wireframe: Math.random() > 0.7,
+    }));
+
+    const cracks = Array.from({ length: 15 }, (_, i) => {
+      const phi = Math.acos(2 * Math.random() - 1);
+      const theta = Math.random() * Math.PI * 2;
+      return {
+        id: i,
+        phi,
+        theta,
+        length: 0.3 + Math.random() * 0.5,
+        width: 0.02 + Math.random() * 0.03,
+        rotZ: Math.random() * Math.PI,
+      };
+    });
+
+    const dust = Array.from({ length: 40 }, (_, i) => {
+      const distance = 4 + Math.random() * 10;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const theta = Math.random() * Math.PI * 2;
+      return {
+        id: i,
+        position: [
+          distance * Math.sin(phi) * Math.cos(theta),
+          distance * Math.sin(phi) * Math.sin(theta),
+          distance * Math.cos(phi),
+        ],
+        size: 0.01 + Math.random() * 0.03,
+        opacity: 0.1 + Math.random() * 0.2,
+      };
+    });
+
+    return { craters, mountains, maria, stars, clouds, cracks, dust };
+  }, []);
+
+  // ---------- ANIMATION ----------
+  useFrame((_, delta) => {
+    starTimeRef.current += delta;
+
     if (moonRef.current) {
-      moonRef.current.rotation.y += delta * 0.1; // หมุนช้าๆ
+      moonRef.current.rotation.y += delta * 0.02;
+    }
+    if (cloudsRef.current) {
+      cloudsRef.current.rotation.y += delta * 0.015;
+      cloudsRef.current.rotation.x += delta * 0.005;
     }
   });
 
-  if (!isDark) return null; // แสดงเฉพาะโหมดกลางคืน
+  if (!isDark) return null;
 
+  const moonRadius = 2.5;
+
+  // ---------- RENDER ----------
   return (
-    <group position={[3, 5, -8]} ref={moonRef}> {/* ปรับตำแหน่งให้อยู่ในมุมมองกล้อง */}
-      {/* ตัวดวงจันทร์ */}
-      <mesh>
-        <sphereGeometry args={[1.2, 32, 32]} />
-        <meshStandardMaterial
-          color="#FFF9C4"
-          emissive="#FFF9C4"
-          emissiveIntensity={2}
-          fog={false}
-        />
-      </mesh>
-      {/* แสงจันทร์ส่องลงมา */}
-      <directionalLight intensity={0.5} color="#D1C4E9" position={[-5, 5, 5]} />
-      {/* แสงฟุ้งรอบดวงจันทร์ */}
-      <pointLight intensity={1} distance={15} color="#FFF9C4" />
-      {/* แสงเรืองรอบดวงจันทร์เพิ่มเติม */}
-      <pointLight intensity={0.5} distance={20} color="#E8EAF6" position={[2, 0, 2]} />
+    <group position={[10, 5, -15]}>
+      <group ref={moonRef}>
+        {/* ตัวดวงจันทร์ */}
+        <mesh>
+          <sphereGeometry args={[moonRadius, 128, 128]} />
+          <meshStandardMaterial
+            color="#F0F0F0"
+            emissive="#D8D8D8"
+            emissiveIntensity={0.6}
+            roughness={0.85}
+            metalness={0.05}
+          />
+        </mesh>
+
+        {/* รอยแตก */}
+        {moonData.cracks.map(c => {
+          const x = moonRadius * Math.sin(c.phi) * Math.cos(c.theta);
+          const y = moonRadius * Math.sin(c.phi) * Math.sin(c.theta);
+          const z = moonRadius * Math.cos(c.phi);
+          return (
+            <mesh
+              key={c.id}
+              position={[x * 1.01, y * 1.01, z * 1.01]}
+              rotation={[c.phi, c.theta, c.rotZ]}
+            >
+              <planeGeometry args={[c.length, c.width]} />
+              <meshStandardMaterial
+                color="#888"
+                transparent
+                opacity={0.7}
+                roughness={0.9}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+          );
+        })}
+      </group>
+
+      {/* ดาว */}
+      {moonData.stars.map(star => {
+        const t = starTimeRef.current * star.twinkleSpeed;
+        const twinkle = Math.sin(t) * 0.5 + 0.5;
+        const x = star.distance * Math.sin(star.phi) * Math.cos(star.theta);
+        const y = star.distance * Math.sin(star.phi) * Math.sin(star.theta);
+        const z = star.distance * Math.cos(star.phi);
+
+        return (
+          <mesh key={star.id} position={[x, y, z]}>
+            <sphereGeometry args={[star.scale, 12, 12]} />
+            <meshStandardMaterial
+              emissive="#FFF"
+              emissiveIntensity={star.intensity * (0.8 + 0.2 * twinkle)}
+              transparent
+              opacity={star.opacity * (0.7 + 0.3 * twinkle)}
+              toneMapped={false}
+            />
+          </mesh>
+        );
+      })}
     </group>
   );
 };
+
+
 // --- 🌳 Tree Component ---
 const Tree = ({ position, scale = 1 }) => {
   return (
@@ -73,26 +221,22 @@ const Bush = ({ position, scale = 1 }) => {
   );
 };
 
-// --- 💡 Street Lamp Component (เสาไฟถนน) ---
+// --- 💡 Street Lamp Component ---
 const StreetLamp = ({ position, rotation, isDark }) => {
   return (
     <group position={position} rotation={rotation}>
-      {/* Pole */}
       <mesh position={[0, 1.5, 0]} castShadow>
         <cylinderGeometry args={[0.05, 0.06, 3, 8]} />
         <meshStandardMaterial color="#263238" metalness={0.6} roughness={0.4} />
       </mesh>
-      {/* Arm */}
       <mesh position={[0.4, 2.9, 0]} rotation={[0, 0, -Math.PI / 2]}>
         <cylinderGeometry args={[0.04, 0.04, 0.8, 8]} />
         <meshStandardMaterial color="#263238" metalness={0.6} roughness={0.4} />
       </mesh>
-      {/* Head */}
       <mesh position={[0.75, 2.85, 0]}>
         <boxGeometry args={[0.3, 0.08, 0.2]} />
         <meshStandardMaterial color="#263238" />
       </mesh>
-      {/* Bulb */}
       <mesh position={[0.75, 2.8, 0]}>
         <boxGeometry args={[0.25, 0.02, 0.15]} />
         <meshStandardMaterial 
@@ -101,7 +245,6 @@ const StreetLamp = ({ position, rotation, isDark }) => {
           emissiveIntensity={isDark ? 2 : 0}
         />
       </mesh>
-      {/* Light Source */}
       {isDark && (
         <spotLight 
           position={[0.75, 2.7, 0]} 
@@ -117,16 +260,14 @@ const StreetLamp = ({ position, rotation, isDark }) => {
   );
 };
 
-// --- 💡 Garden Light Component (ไฟทางเดิน) ---
+// --- 💡 Garden Light Component ---
 const GardenLight = ({ position, isDark }) => {
   return (
     <group position={position}>
-       {/* Body */}
        <mesh position={[0, 0.2, 0]} castShadow>
          <boxGeometry args={[0.1, 0.4, 0.1]} />
          <meshStandardMaterial color="#424242" />
        </mesh>
-       {/* Light Part */}
        <mesh position={[0, 0.35, 0]}>
          <boxGeometry args={[0.08, 0.08, 0.08]} />
          <meshStandardMaterial 
@@ -135,7 +276,6 @@ const GardenLight = ({ position, isDark }) => {
             emissiveIntensity={isDark ? 3 : 0} 
          />
        </mesh>
-       {/* Glow */}
        {isDark && (
          <pointLight position={[0, 0.4, 0]} intensity={1} distance={2} color="#FFD54F" />
        )}
@@ -143,127 +283,148 @@ const GardenLight = ({ position, isDark }) => {
   );
 };
 
-// --- 🚗 Compact Hyper-Realistic Car (Scaled Down & Detailed) ---
+// --- 🚗 Car Component (แก้ไขแล้ว) ---
 const Car = ({ position, rotation, isDark }) => {
   const carRef = useRef();
+  const wheelRef1 = useRef();
+  const wheelRef2 = useRef();
+  const wheelRef3 = useRef();
+  const wheelRef4 = useRef();
+  const wheelRefs = [wheelRef1, wheelRef2, wheelRef3, wheelRef4];
+  
   const [animationProgress, setAnimationProgress] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsAnimating(true);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useFrame((state, delta) => {
-    if (carRef.current) {
-      // Animate car leaving the house over 5 seconds
-      const duration = 5;
-      const progress = Math.min(animationProgress + delta / duration, 1);
-      setAnimationProgress(progress);
+    if (!carRef.current || !isAnimating || animationProgress >= 1) return;
 
-      // Move car forward along z-axis from position[2] to position[2] + 6
-      const startZ = position[2];
-      const endZ = startZ + 6;
-      const currentZ = startZ + (endZ - startZ) * progress;
+    const newProgress = Math.min(animationProgress + delta / 5, 1);
+    setAnimationProgress(newProgress);
 
-      carRef.current.position.set(position[0], position[1], currentZ);
+    const startZ = position[2];
+    const endZ = startZ + 12;
+    const currentZ = startZ + (endZ - startZ) * newProgress;
+    const wheelRotation = newProgress * Math.PI * 8;
 
-      // Optional: Rotate wheels while moving
-      const wheelRotation = progress * Math.PI * 10; // Rotate wheels 10 full turns
-      // Assuming wheels are at indices 0-3 in the group, but since it's a group, need to access children
-      // For simplicity, skip wheel rotation for now
+    carRef.current.position.set(position[0], position[1], currentZ);
+    
+    wheelRefs.forEach((wheelRef, index) => {
+      if (wheelRef.current) {
+        if (index < 2) {
+          wheelRef.current.rotation.x = -wheelRotation;
+        } else {
+          wheelRef.current.rotation.x = wheelRotation;
+        }
+      }
+    });
+
+    if (newProgress > 0.5) {
+      const turnAmount = (newProgress - 0.5) * 0.5;
+      carRef.current.rotation.y = rotation[1] - turnAmount;
+    }
+
+    if (newProgress >= 1) {
+      setTimeout(() => {
+        setAnimationProgress(0);
+        setIsAnimating(false);
+        carRef.current.position.set(position[0], position[1], position[2]);
+        carRef.current.rotation.set(rotation[0], rotation[1], rotation[2]);
+        
+        wheelRefs.forEach(wheelRef => {
+          if (wheelRef.current) {
+            wheelRef.current.rotation.set(0, 0, Math.PI / 2);
+          }
+        });
+
+        setTimeout(() => {
+          setIsAnimating(true);
+        }, 3000);
+      }, 5000);
     }
   });
-  // --- CAR CUSTOMIZATION ---
-  const bodyColor = "#283593"; // Deep Blue Metallic
-  const roofColor = "#1A1A1A"; // Black Roof
-  const glassColor = "#263238"; 
-  const accentColor = "#FFC107"; // Gold Brake Calipers
-  
-  // ลดขนาดล้อและระยะต่างๆ ลง 25%
-  const wheelRadius = 0.2; 
+
+  const bodyColor = "#283593";
+  const roofColor = "#1A1A1A";
+  const glassColor = "#263238";
+  const accentColor = "#FFC107";
+  const wheelRadius = 0.2;
   const wheelWidth = 0.14;
-  const chassisLevel = 0.22; // ระยะห่างจากพื้น (Ground Clearance)
+  const chassisLevel = 0.22;
 
   return (
-    <group position={position} rotation={rotation}>
-      
-      {/* --- Main Car Body Group --- */}
+    <group ref={carRef} position={position} rotation={rotation}>
       <group position={[0, chassisLevel, 0]}>
-
-        {/* 1. Base Plate (ฐานล่างสุด) */}
         <mesh position={[0, -0.04, 0]} castShadow receiveShadow>
-          <boxGeometry args={[1.05, 0.08, 2.1]} /> {/* ลดขนาดจาก 1.4/2.8 */}
+          <boxGeometry args={[1.05, 0.08, 2.1]} />
           <meshStandardMaterial color="#0A0A0A" roughness={0.9} />
         </mesh>
 
-        {/* 2. Main Chassis Body (ตัวถังหลัก) */}
         <mesh position={[0, 0.18, 0]} castShadow receiveShadow>
           <boxGeometry args={[1.0, 0.32, 2.05]} />
           <meshStandardMaterial color={bodyColor} metalness={0.7} roughness={0.2} />
         </mesh>
 
-        {/* 3. Fender Flares (ซุ้มล้อโป่ง - ปรับตำแหน่งใหม่) */}
-        {/* หน้าซ้าย/ขวา */}
         <mesh position={[0.5, 0.2, 0.65]} castShadow><boxGeometry args={[0.15, 0.22, 0.45]} /><meshStandardMaterial color={bodyColor} metalness={0.7} roughness={0.2} /></mesh>
         <mesh position={[-0.5, 0.2, 0.65]} castShadow><boxGeometry args={[0.15, 0.22, 0.45]} /><meshStandardMaterial color={bodyColor} metalness={0.7} roughness={0.2} /></mesh>
-        {/* หลังซ้าย/ขวา */}
         <mesh position={[0.5, 0.2, -0.65]} castShadow><boxGeometry args={[0.15, 0.22, 0.45]} /><meshStandardMaterial color={bodyColor} metalness={0.7} roughness={0.2} /></mesh>
         <mesh position={[-0.5, 0.2, -0.65]} castShadow><boxGeometry args={[0.15, 0.22, 0.45]} /><meshStandardMaterial color={bodyColor} metalness={0.7} roughness={0.2} /></mesh>
 
-        {/* 4. Hood (ฝากระโปรงหน้า - ลาดลง) */}
         <mesh position={[0, 0.36, 0.7]} rotation={[-0.1, 0, 0]} castShadow>
           <boxGeometry args={[0.95, 0.08, 0.8]} />
           <meshStandardMaterial color={bodyColor} metalness={0.7} roughness={0.2} />
         </mesh>
 
-        {/* 5. Windshield & Cabin (กระจกและห้องโดยสาร) */}
         <mesh position={[0, 0.55, -0.1]} castShadow>
           <boxGeometry args={[0.85, 0.38, 1.3]} />
           <meshStandardMaterial color={glassColor} metalness={0.95} roughness={0.1} />
         </mesh>
 
-        {/* 6. Roof (หลังคา Two-tone) */}
         <mesh position={[0, 0.75, -0.15]} castShadow>
           <boxGeometry args={[0.9, 0.04, 1.1]} />
           <meshStandardMaterial color={roofColor} metalness={0.5} roughness={0.3} />
         </mesh>
 
-        {/* 7. Rear Trunk (ท้ายรถลาดลง) */}
         <mesh position={[0, 0.36, -0.7]} rotation={[0.1, 0, 0]} castShadow>
           <boxGeometry args={[0.95, 0.08, 0.8]} />
           <meshStandardMaterial color={bodyColor} metalness={0.7} roughness={0.2} />
         </mesh>
 
-        {/* --- EXTERIOR DETAILS (รายละเอียดภายนอก) --- */}
-        {/* กระจกมองข้าง */}
         <group>
           <mesh position={[0.52, 0.45, 0.3]}><boxGeometry args={[0.04, 0.02, 0.08]} /><meshStandardMaterial color="#555" /></mesh>
           <mesh position={[0.58, 0.42, 0.35]}><boxGeometry args={[0.12, 0.08, 0.06]} /><meshStandardMaterial color={bodyColor} /></mesh>
-          
           <mesh position={[-0.52, 0.45, 0.3]}><boxGeometry args={[0.04, 0.02, 0.08]} /><meshStandardMaterial color="#555" /></mesh>
           <mesh position={[-0.58, 0.42, 0.35]}><boxGeometry args={[0.12, 0.08, 0.06]} /><meshStandardMaterial color={bodyColor} /></mesh>
         </group>
 
-        {/* มือจับประตู */}
         <mesh position={[0.51, 0.32, 0]}><boxGeometry args={[0.02, 0.025, 0.12]} /><meshStandardMaterial color={roofColor} /></mesh>
         <mesh position={[-0.51, 0.32, 0]}><boxGeometry args={[0.02, 0.025, 0.12]} /><meshStandardMaterial color={roofColor} /></mesh>
 
-        {/* ท่อไอเสียคู่ */}
         <mesh position={[0.2, 0.05, -1.05]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.035, 0.035, 0.1, 8]} /><meshStandardMaterial color="#333" /></mesh>
         <mesh position={[-0.2, 0.05, -1.05]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.035, 0.035, 0.1, 8]} /><meshStandardMaterial color="#333" /></mesh>
-
       </group>
 
-
-      {/* --- WHEELS (ล้อแม็ก + เบรก) --- */}
       {[[-0.48, 0.65], [0.48, 0.65], [-0.48, -0.65], [0.48, -0.65]].map((pos, i) => (
-        <group key={i} position={[pos[0], wheelRadius, pos[1]]} rotation={[0, 0, Math.PI / 2]}>
-          {/* ยาง */}
+        <group 
+          key={i} 
+          ref={wheelRefs[i]}
+          position={[pos[0], wheelRadius, pos[1]]} 
+          rotation={[0, 0, Math.PI / 2]}
+        >
           <mesh castShadow receiveShadow>
             <cylinderGeometry args={[wheelRadius, wheelRadius, wheelWidth, 24]} />
             <meshStandardMaterial color="#111111" roughness={0.8} />
           </mesh>
-          {/* แม็ก */}
           <mesh position={[0, i % 2 === 0 ? -0.015 : 0.015, 0]}>
             <cylinderGeometry args={[0.13, 0.13, wheelWidth + 0.01, 16]} />
             <meshStandardMaterial color="#505050" metalness={0.8} />
           </mesh>
-          {/* เบรกคาลิปเปอร์ */}
           <mesh position={[i % 2 === 0 ? -0.04 : 0.04, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
             <boxGeometry args={[0.04, 0.1, 0.06]} />
             <meshStandardMaterial color={accentColor} />
@@ -271,74 +432,121 @@ const Car = ({ position, rotation, isDark }) => {
         </group>
       ))}
 
-
-      {/* --- LIGHTING (ไฟหน้า/หลัง LED) --- */}
       <group position={[0, chassisLevel, 0]}>
-        
-        {/* ไฟหน้า (Headlights) */}
         <group position={[0, 0.35, 1.05]}>
-           {/* กรอบดำ */}
-           <mesh position={[0, 0, -0.02]}><boxGeometry args={[0.95, 0.2, 0.04]} /><meshStandardMaterial color="#0A0A0A" /></mesh>
-           {/* หลอดไฟ */}
-           {[-0.35, 0.35].map((x, i) => (
-             <group key={i} position={[x, 0, 0]}>
-                <mesh>
-                  <boxGeometry args={[0.22, 0.12, 0.05]} />
-                  <meshStandardMaterial color={isDark ? "#E0F7FA" : "#FFF"} emissive={isDark ? "#FFF" : "#CCC"} emissiveIntensity={isDark ? 5 : 0.5} toneMapped={false} />
-                </mesh>
-                {isDark && <spotLight position={[0, 0, 0.1]} angle={0.5} penumbra={0.4} intensity={8} distance={10} color="#FFF" target-position={[0, -0.5, 5]} />}
-             </group>
-           ))}
+          <mesh position={[0, 0, -0.02]}><boxGeometry args={[0.95, 0.2, 0.04]} /><meshStandardMaterial color="#0A0A0A" /></mesh>
+          {[-0.35, 0.35].map((x, i) => (
+            <group key={i} position={[x, 0, 0]}>
+              <mesh>
+                <boxGeometry args={[0.22, 0.12, 0.05]} />
+                <meshStandardMaterial 
+                  color={isDark ? "#E0F7FA" : "#FFF"} 
+                  emissive={isDark ? "#FFF" : "#CCC"} 
+                  emissiveIntensity={isDark ? 5 : 0.5} 
+                  toneMapped={false} 
+                />
+              </mesh>
+              {isDark && isAnimating && (
+                <spotLight 
+                  position={[0, 0, 0.1]} 
+                  angle={0.5} 
+                  penumbra={0.4} 
+                  intensity={8} 
+                  distance={10} 
+                  color="#FFF" 
+                />
+              )}
+            </group>
+          ))}
         </group>
 
-        {/* ไฟท้าย (Tail Lights LED Bar) */}
         <group position={[0, 0.38, -1.05]}>
-           <mesh position={[0, 0, -0.02]}><boxGeometry args={[0.95, 0.15, 0.04]} /><meshStandardMaterial color="#0A0A0A" /></mesh>
-           {/* LED Strip */}
-           <mesh><boxGeometry args={[0.9, 0.06, 0.05]} /><meshStandardMaterial color="#D32F2F" emissive="#FF0000" emissiveIntensity={isDark ? 2 : 0.8} toneMapped={false} /></mesh>
-           {/* ไฟเลี้ยว/ถอย */}
-           <mesh position={[0.3, 0.05, 0.01]}><boxGeometry args={[0.15, 0.02, 0.05]} /><meshStandardMaterial color="#FFB300" emissive="#FFB300" emissiveIntensity={1} /></mesh>
-           <mesh position={[-0.3, 0.05, 0.01]}><boxGeometry args={[0.15, 0.02, 0.05]} /><meshStandardMaterial color="#FFB300" emissive="#FFB300" emissiveIntensity={1} /></mesh>
+          <mesh position={[0, 0, -0.02]}><boxGeometry args={[0.95, 0.15, 0.04]} /><meshStandardMaterial color="#0A0A0A" /></mesh>
+          <mesh>
+            <boxGeometry args={[0.9, 0.06, 0.05]} />
+            <meshStandardMaterial 
+              color="#D32F2F" 
+              emissive="#FF0000" 
+              emissiveIntensity={isDark ? 2 : 0.8} 
+              toneMapped={false} 
+            />
+          </mesh>
+          <mesh position={[0.3, 0.05, 0.01]}>
+            <boxGeometry args={[0.15, 0.02, 0.05]} />
+            <meshStandardMaterial 
+              color="#FFB300" 
+              emissive={animationProgress > 0.45 ? "#FFB300" : "#000"} 
+              emissiveIntensity={animationProgress > 0.45 ? (Math.sin(Date.now() * 0.01) * 0.5 + 1) : 0}
+            />
+          </mesh>
+          <mesh position={[-0.3, 0.05, 0.01]}>
+            <boxGeometry args={[0.15, 0.02, 0.05]} />
+            <meshStandardMaterial 
+              color="#FFB300" 
+              emissive={animationProgress > 0.45 ? "#FFB300" : "#000"} 
+              emissiveIntensity={animationProgress > 0.45 ? (Math.sin(Date.now() * 0.01) * 0.5 + 1) : 0}
+            />
+          </mesh>
         </group>
 
-        {/* กระจังหน้า (Grille) */}
         <group position={[0, 0.15, 1.06]} rotation={[0.05, 0, 0]}>
-             <mesh position={[0, 0.15, 0]}><boxGeometry args={[0.5, 0.12, 0.04]} /><meshStandardMaterial color="#111" /></mesh>
-             <mesh position={[0, -0.05, 0]}><boxGeometry args={[0.8, 0.08, 0.04]} /><meshStandardMaterial color="#111" /></mesh>
-             <mesh position={[0, -0.05, 0.03]}><boxGeometry args={[0.3, 0.06, 0.02]} /><meshStandardMaterial color="#333" /></mesh> {/* ป้ายทะเบียน */}
+          <mesh position={[0, 0.15, 0]}><boxGeometry args={[0.5, 0.12, 0.04]} /><meshStandardMaterial color="#111" /></mesh>
+          <mesh position={[0, -0.05, 0]}><boxGeometry args={[0.8, 0.08, 0.04]} /><meshStandardMaterial color="#111" /></mesh>
+          <mesh position={[0, -0.05, 0.03]}><boxGeometry args={[0.3, 0.06, 0.02]} /><meshStandardMaterial color="#333" /></mesh>
         </group>
-
       </group>
 
+      {isAnimating && animationProgress < 1 && (
+        <>
+          <group position={[-0.2, 0.05, -1.05]}>
+            <mesh>
+              <sphereGeometry args={[0.05 * (1 - animationProgress), 8, 8]} />
+              <meshStandardMaterial 
+                color="#888888" 
+                transparent 
+                opacity={0.3} 
+                emissive="#555555"
+                emissiveIntensity={0.5}
+              />
+            </mesh>
+          </group>
+          <group position={[0.2, 0.05, -1.05]}>
+            <mesh>
+              <sphereGeometry args={[0.05 * (1 - animationProgress), 8, 8]} />
+              <meshStandardMaterial 
+                color="#888888" 
+                transparent 
+                opacity={0.3} 
+                emissive="#555555"
+                emissiveIntensity={0.5}
+              />
+            </mesh>
+          </group>
+        </>
+      )}
     </group>
   );
 };
 
-// --- 🏊 Swimming Pool Component (Smaller Size) ---
+// --- 🏊 Swimming Pool Component ---
 const SwimmingPool = ({ position, isDark }) => {
   return (
     <group position={position}>
-      {/* 1. Pool Deck (ลดขนาดฐานสระลง) */}
       <mesh position={[0, 0.05, 0]} receiveShadow>
-         {/* เดิมกว้าง 3 ยาว 5.5 -> ปรับเหลือ กว้าง 2.6 ยาว 5 */}
          <boxGeometry args={[2.6, 0.1, 5]} /> 
          <meshStandardMaterial color="#8D6E63" roughness={0.8} />
       </mesh>
 
-      {/* 2. Water Hole (ลดขนาดบ่อน้ำ) */}
       <mesh position={[0, 0.06, 0]}>
-         {/* ปรับเหลือ กว้าง 2.0 ยาว 4.0 */}
          <boxGeometry args={[2.0, 0.05, 4.0]} />
          <meshStandardMaterial color="#006064" />
       </mesh>
 
-      {/* 3. Water Surface (ผิวน้ำ) */}
       <mesh position={[0, 0.1, 0]}>
         <boxGeometry args={[2.0, 0.05, 4.0]} />
         <meshPhysicalMaterial color="#00E5FF" transparent opacity={0.7} metalness={0.1} roughness={0.05} transmission={0.6} thickness={1} />
       </mesh>
       
-      {/* Pool Lights (Underwater) */}
       {isDark && (
         <>
             <pointLight position={[0, 0.3, 1]} intensity={2} distance={3} color="#00E5FF" />
@@ -346,72 +554,58 @@ const SwimmingPool = ({ position, isDark }) => {
         </>
       )}
 
-      {/* 4. Coping (ขอบปูนสระ - คำนวณตำแหน่งใหม่ให้ชิดน้ำมากขึ้น) */}
-      {/* ขอบบน-ล่าง (Z axis) */}
       <mesh position={[0, 0.11, -2.1]}><boxGeometry args={[2.4, 0.05, 0.2]} /><meshStandardMaterial color="#EEEEEE" /></mesh>
       <mesh position={[0, 0.11, 2.1]}><boxGeometry args={[2.4, 0.05, 0.2]} /><meshStandardMaterial color="#EEEEEE" /></mesh>
-      {/* ขอบซ้าย-ขวา (X axis) - ขยับเข้าจาก 1.7 เหลือ 1.1 */}
       <mesh position={[-1.1, 0.11, 0]}><boxGeometry args={[0.2, 0.05, 4.4]} /><meshStandardMaterial color="#EEEEEE" /></mesh>
       <mesh position={[1.1, 0.11, 0]}><boxGeometry args={[0.2, 0.05, 4.4]} /><meshStandardMaterial color="#EEEEEE" /></mesh>
 
-      {/* 5. Ladder (บันได - ขยับเข้ามาให้เกาะขอบสระใหม่) */}
       <group position={[-0.9, 0, -2.0]}>
          <mesh position={[0, 0, 0]}><cylinderGeometry args={[0.03, 0.03, 0.6]} /><meshStandardMaterial color="#CFD8DC" metalness={0.8} /></mesh>
          <mesh position={[0.3, 0, 0]}><cylinderGeometry args={[0.03, 0.03, 0.6]} /><meshStandardMaterial color="#CFD8DC" metalness={0.8} /></mesh>
       </group>
 
-      {/* 6. Beach Chair (New Design: Modern Wooden Lounger) */}
       <group position={[0.7, 0.18, -3.5]} rotation={[0, -0.6, 0]}>
-        
-        {/* --- โครงเก้าอี้ (Frame) --- */}
-        {/* พื้นราบ (Seat Base) */}
         <mesh position={[0, 0, 0.3]} castShadow>
           <boxGeometry args={[0.6, 0.05, 1.2]} />
-          <meshStandardMaterial color="#5D4037" /> {/* สีไม้เข้ม */}
+          <meshStandardMaterial color="#5D4037" />
         </mesh>
 
-        {/* ขาเก้าอี้ (Legs) */}
         <mesh position={[-0.25, -0.08, 0.8]}><cylinderGeometry args={[0.02, 0.02, 0.15]} /><meshStandardMaterial color="#3E2723" /></mesh>
         <mesh position={[0.25, -0.08, 0.8]}><cylinderGeometry args={[0.02, 0.02, 0.15]} /><meshStandardMaterial color="#3E2723" /></mesh>
         <mesh position={[-0.25, -0.08, -0.2]}><cylinderGeometry args={[0.02, 0.02, 0.15]} /><meshStandardMaterial color="#3E2723" /></mesh>
         <mesh position={[0.25, -0.08, -0.2]}><cylinderGeometry args={[0.02, 0.02, 0.15]} /><meshStandardMaterial color="#3E2723" /></mesh>
 
-        {/* --- พนักพิง (Backrest Frame - ปรับองศา) --- */}
         <group position={[0, 0, -0.3]} rotation={[0.5, 0, 0]}> 
           <mesh position={[0, 0.25, 0]} castShadow>
              <boxGeometry args={[0.6, 0.05, 0.6]} />
              <meshStandardMaterial color="#5D4037" />
           </mesh>
-          {/* เบาะพิงหลัง (Back Cushion) */}
           <mesh position={[0, 0.28, 0]}>
              <boxGeometry args={[0.5, 0.06, 0.55]} />
-             <meshStandardMaterial color="#FF5252" /> {/* สีเบาะแดง */}
+             <meshStandardMaterial color="#FF5252" />
           </mesh>
         </group>
 
-        {/* --- เบาะนั่ง (Seat Cushion) --- */}
         <mesh position={[0, 0.06, 0.3]}>
           <boxGeometry args={[0.5, 0.06, 1.15]} />
-          <meshStandardMaterial color="#FF5252" /> {/* สีเบาะแดง */}
+          <meshStandardMaterial color="#FF5252" />
         </mesh>
 
-        {/* (Optional) หมอนใบเล็ก */}
         <mesh position={[0, 0.45, -0.55]} rotation={[0.5, 0, 0]}>
            <boxGeometry args={[0.35, 0.1, 0.2]} />
            <meshStandardMaterial color="#FFFFFF" />
         </mesh>
-
       </group>
     </group>
   );
 };
 
-// --- 🏠 Modern House Component (With Fixes & Lights) ---
+// --- 🏠 Modern House Component (แก้ไขแล้ว) ---
 const ModernHouse = ({ isDark }) => {
   const group = useRef();
   const { gl } = useThree();
+  const canvasRef = useRef(null);
   
-  // Mouse drag state logic
   const isDragging = useRef(false);
   const previousMousePosition = useRef({ x: 0, y: 0 });
   const targetRotation = useRef({ x: 0.25, y: -0.5 });
@@ -422,13 +616,17 @@ const ModernHouse = ({ isDark }) => {
     e.stopPropagation();
     isDragging.current = true;
     previousMousePosition.current = { x: e.clientX, y: e.clientY };
-    gl.domElement.style.cursor = 'grabbing';
-  }, [gl]);
+    if (canvasRef.current) {
+      canvasRef.current.style.cursor = 'grabbing';
+    }
+  }, []);
 
   const handlePointerUp = useCallback(() => {
     isDragging.current = false;
-    gl.domElement.style.cursor = 'grab';
-  }, [gl]);
+    if (canvasRef.current) {
+      canvasRef.current.style.cursor = 'grab';
+    }
+  }, []);
 
   const handlePointerMove = useCallback((e) => {
     if (!isDragging.current) return;
@@ -442,12 +640,19 @@ const ModernHouse = ({ isDark }) => {
 
   useEffect(() => {
     const canvas = gl.domElement;
-    canvas.style.cursor = 'grab';
-    canvas.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('pointerup', handlePointerUp);
-    window.addEventListener('pointermove', handlePointerMove);
+    canvasRef.current = canvas;
+    
+    if (canvas) {
+      canvas.style.cursor = 'grab';
+      canvas.addEventListener('pointerdown', handlePointerDown);
+      window.addEventListener('pointerup', handlePointerUp);
+      window.addEventListener('pointermove', handlePointerMove);
+    }
+    
     return () => {
-      canvas.removeEventListener('pointerdown', handlePointerDown);
+      if (canvas) {
+        canvas.removeEventListener('pointerdown', handlePointerDown);
+      }
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointermove', handlePointerMove);
     };
@@ -463,49 +668,37 @@ const ModernHouse = ({ isDark }) => {
   });
 
   return (
-    
     <group ref={group} position={[0, -1.2, 0]} scale={[0.45, 0.45, 0.45]}>
-      
-      {/* Ground & Landscape */}
       <group position={[0, -0.1, 0]}>
         <mesh position={[0, -0.15, 0]} receiveShadow castShadow>
           <boxGeometry args={[12, 0.35, 11]} /> 
           <meshStandardMaterial color="#7CB342" />
         </mesh>
         
-        {/* Driveway */}
         <mesh position={[-2.5, 0.02, 3]} receiveShadow>
           <boxGeometry args={[3, 0.08, 5]} />
           <meshStandardMaterial color="#9E9E9E" roughness={0.7} />
         </mesh>
 
-        {/* Walkway (✅ Fixed Alignment: X=0.5 to match door) */}
         <mesh position={[0.5, 0.02, 2.5]} castShadow>
           <boxGeometry args={[1.5, 0.08, 2.5]} />
           <meshStandardMaterial color="#BDBDBD" roughness={0.8} />
         </mesh>
 
-        {/* Fences */}
         <mesh position={[-5.8, 0.4, 0]} castShadow><boxGeometry args={[0.12, 0.8, 9]} /><meshStandardMaterial color="#FAFAFA" /></mesh>
         <mesh position={[5.8, 0.4, 0]} castShadow><boxGeometry args={[0.12, 0.8, 9]} /><meshStandardMaterial color="#FAFAFA" /></mesh>
         <mesh position={[0, 0.4, -4.3]} castShadow><boxGeometry args={[11.7, 0.8, 0.12]} /><meshStandardMaterial color="#FAFAFA" /></mesh>
       </group>
 
-      {/* ===== 💡 LIGHTS ===== */}
-      
-      {/* 1. Street Lamp (เสาไฟถนน) */}
       <StreetLamp position={[-3.5, 0, 5]} rotation={[0, -Math.PI / 4, 0]} isDark={isDark} />
       
-      {/* 2. Garden Lights (✅ Fixed Alignment to flank the walkway) */}
-      <GardenLight position={[-0.1, 0, 3.5]} isDark={isDark} /> {/* ซ้าย */}
-      <GardenLight position={[1.1, 0, 3.5]} isDark={isDark} />  {/* ขวา */}
-      <GardenLight position={[-0.1, 0, 2]} isDark={isDark} />   {/* ซ้ายใน */}
-      <GardenLight position={[1.1, 0, 2]} isDark={isDark} />    {/* ขวาใน */}
+      <GardenLight position={[-0.1, 0, 3.5]} isDark={isDark} />
+      <GardenLight position={[1.1, 0, 3.5]} isDark={isDark} />
+      <GardenLight position={[-0.1, 0, 2]} isDark={isDark} />
+      <GardenLight position={[1.1, 0, 2]} isDark={isDark} />
 
-      {/* ===== 🏊 SWIMMING POOL ===== */}
       <SwimmingPool position={[4.0, 0, 1.5]} isDark={isDark} />
 
-      {/* ===== 🏠 GARAGE ===== */}
       <group position={[-2.5, 0.5, 0.5]}>
         <mesh castShadow>
           <boxGeometry args={[2.5, 2, 2.5]} />
@@ -520,7 +713,6 @@ const ModernHouse = ({ isDark }) => {
           <meshStandardMaterial color="#5D4037" />
         </mesh>
 
-        {/* Wall Light Garage (ไฟกิ่งโรงรถ) */}
         <group position={[1, 0.5, 1.3]}>
            <mesh>
              <boxGeometry args={[0.15, 0.2, 0.1]} />
@@ -534,10 +726,8 @@ const ModernHouse = ({ isDark }) => {
         </group>
       </group>
 
-      {/* ===== 🚗 CAR ===== */}
       <Car position={[-2.5, 0, 4]} rotation={[0, 0, 0]} isDark={isDark} />
 
-      {/* ===== MAIN BUILDING (Global Center shifted X=0.5) ===== */}
       <group position={[0.5, 0.8, -0.3]}>
         <mesh position={[0, 0, 0]} castShadow>
           <boxGeometry args={[4, 2.5, 3.5]} />
@@ -548,7 +738,6 @@ const ModernHouse = ({ isDark }) => {
           <meshStandardMaterial color="#F5F5F5" />
         </mesh>
         
-        {/* Windows */}
         <mesh position={[-1.2, 0.2, 1.76]}>
           <boxGeometry args={[0.8, 1.2, 0.06]} />
           <meshStandardMaterial color={isDark ? "#FFE082" : "#4FC3F7"} emissive={isDark ? "#FFA726" : "#000000"} emissiveIntensity={isDark ? 0.8 : 0} metalness={isDark ? 0.1 : 0.5} roughness={isDark ? 0.3 : 0.1} />
@@ -558,7 +747,6 @@ const ModernHouse = ({ isDark }) => {
           <meshStandardMaterial color={isDark ? "#FFE082" : "#4FC3F7"} emissive={isDark ? "#FFA726" : "#000000"} emissiveIntensity={isDark ? 0.8 : 0} metalness={isDark ? 0.1 : 0.5} roughness={isDark ? 0.3 : 0.1} />
         </mesh>
         
-        {/* Door (Local X=0 matches Global X=0.5) */}
         <mesh position={[0, -0.4, 1.76]} castShadow>
           <boxGeometry args={[0.9, 1.7, 0.1]} />
           <meshStandardMaterial color="#3E2723" />
@@ -568,7 +756,6 @@ const ModernHouse = ({ isDark }) => {
           <meshStandardMaterial color="#FFD54F" metalness={0.8} />
         </mesh>
 
-        {/* Wall Lights Front Door (ไฟกิ่งหน้าประตู) */}
         <group position={[-0.6, 0.2, 1.8]}>
            <mesh>
              <boxGeometry args={[0.12, 0.25, 0.1]} />
@@ -592,13 +779,11 @@ const ModernHouse = ({ isDark }) => {
            {isDark && <pointLight intensity={1.5} distance={4} color="#FFA000" />}
         </group>
         
-        {/* Window Floor 2 */}
         <mesh position={[0.3, 2.2, 1.61]}>
           <boxGeometry args={[2, 1, 0.06]} />
           <meshStandardMaterial color={isDark ? "#FFE082" : "#4FC3F7"} emissive={isDark ? "#FFA726" : "#000000"} emissiveIntensity={isDark ? 0.8 : 0} metalness={isDark ? 0.1 : 0.5} roughness={isDark ? 0.3 : 0.1} />
         </mesh>
         
-        {/* Balcony */}
         <mesh position={[0.3, 1.4, 1.8]} castShadow>
           <boxGeometry args={[2.5, 0.12, 0.6]} />
           <meshStandardMaterial color="#9E9E9E" />
@@ -609,7 +794,6 @@ const ModernHouse = ({ isDark }) => {
         </mesh>
       </group>
 
-      {/* ===== ROOF ===== */}
       <group position={[0.8, 3.5, -0.3]}>
         <mesh position={[0, 0.5, 0]} castShadow>
           <boxGeometry args={[4.2, 0.22, 3.8]} />
@@ -625,7 +809,6 @@ const ModernHouse = ({ isDark }) => {
         </mesh>
       </group>
 
-      {/* ===== TREES & BUSHES ===== */}
       <Tree position={[5.2, 0, -3.5]} scale={1.2} />
       <Tree position={[-5.0, 0, -3]} scale={1.1} />
       <Tree position={[5, 0, 4]} scale={0.9} />
@@ -634,9 +817,7 @@ const ModernHouse = ({ isDark }) => {
       <Bush position={[-1, 0.1, 3]} scale={0.8} />
       <Bush position={[5.2, 0.1, 1]} scale={0.7} />
       <Bush position={[-4.5, 0.1, 1]} scale={0.9} />
-
     </group>
-    
   );
 };
 
@@ -735,7 +916,6 @@ const InfoPanel = ({ type, isVisible, onClose }) => {
   return (
     <div className={`fixed right-4 top-24 w-80 z-40 transition-all duration-500 ease-out ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'}`}>
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
-        {/* Header */}
         <div className={`${info.color} px-5 py-4 flex items-center justify-between`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
@@ -751,7 +931,6 @@ const InfoPanel = ({ type, isVisible, onClose }) => {
           </button>
         </div>
         
-        {/* Content */}
         <div className="p-5">
           {info.content}
         </div>
@@ -760,7 +939,7 @@ const InfoPanel = ({ type, isVisible, onClose }) => {
   );
 };
 
-// --- Hero Content (Left side) ---
+// --- Hero Content ---
 const HeroContent = ({ isDark }) => {
   return (
     <div className="fixed left-6 md:left-16 top-1/2 -translate-y-1/2 z-20 max-w-md pointer-events-none">
@@ -779,7 +958,6 @@ const HeroContent = ({ isDark }) => {
           ด้วยเทคโนโลยีทันสมัย ใส่ใจทุกรายละเอียด
         </p>
         
-        {/* Stats */}
         <div className={`flex gap-6 mb-6 p-4 rounded-2xl ${isDark ? 'bg-slate-800' : 'bg-slate-900'} text-white`}>
           <div className="text-center">
             <div className="text-xl font-bold text-orange-400">50+</div>
@@ -825,19 +1003,16 @@ const HomePage = ({ isDark }) => {
     setActivePanel(null);
   }, []);
 
-  // Theme-aware backgrounds
   const lightBg = 'linear-gradient(180deg, #fef3c7 0%, #fed7aa 25%, #fecaca 50%, #e0e7ff 75%, #c7d2fe 100%)';
   const darkBg = 'linear-gradient(180deg, #0f172a 0%, #1e293b 30%, #334155 60%, #1e1b4b 100%)';
 
   return (
     <>
-      {/* Background Gradient - Theme aware */}
       <div className="fixed inset-0 w-full h-full transition-all duration-700" style={{ 
         background: isDark ? darkBg : lightBg,
         zIndex: -1 
       }}></div>
       
-      {/* Decorative Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none transition-all duration-700" style={{ zIndex: -1 }}>
         {isDark ? (
           <>
@@ -864,7 +1039,6 @@ const HomePage = ({ isDark }) => {
         )}
       </div>
 
-      {/* 3D Canvas */}
       <div className="fixed inset-0 w-full h-screen" style={{ zIndex: 0 }}>
         <Canvas 
           shadows 
@@ -873,7 +1047,6 @@ const HomePage = ({ isDark }) => {
           style={{ background: 'transparent' }}
         >
           <Suspense fallback={null}>
-            {/* 🌕 ดวงจันทร์ใหม่เพิ่มตรงนี้ */}
             <Moon isDark={isDark} />
             
             <ambientLight intensity={isDark ? 0.3 : 0.6} />
@@ -894,13 +1067,10 @@ const HomePage = ({ isDark }) => {
         </Canvas>
       </div>
 
-      {/* UI Elements */}
       <HeroContent isDark={isDark} />
       
-      {/* Bottom Menu */}
       <BottomMenu activePanel={activePanel} onButtonClick={handleToggle} />
 
-      {/* Info Panels */}
       <InfoPanel 
         type={activePanel} 
         isVisible={!!activePanel} 
