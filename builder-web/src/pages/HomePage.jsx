@@ -2,7 +2,7 @@ import React, { useRef, useState, Suspense, useCallback, useEffect, useMemo } fr
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment } from '@react-three/drei';
 import { Phone, Mail, X, ChevronRight, Home, Building, Waves, Hotel, MessageCircle } from 'lucide-react';
-import * as THREE from 'three'; // ⬅️ เพิ่ม import นี้
+import * as THREE from 'three';
 
 const Moon = ({ isDark }) => {
   const moonRef = useRef();
@@ -121,7 +121,9 @@ const Moon = ({ isDark }) => {
 
   // ---------- RENDER ----------
   return (
-    <group position={[10, 5, -15]}>
+    <group position={[10, 5
+    
+    , -15]}>
       <group ref={moonRef}>
         {/* ตัวดวงจันทร์ */}
         <mesh>
