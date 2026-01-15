@@ -48,14 +48,18 @@ function App() {
         <Route path="/" element={<HomePage isDark={isDark} />} />
         
         {/* หน้าอื่นๆ */}
-        <Route path="/services" element={<ServicesPage />} />
-        <Route path="/portfolio" element={<PortfolioPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/services" element={<ServicesPage isDark={isDark} />} />
+        <Route path="/portfolio" element={<PortfolioPage isDark={isDark} />} />
+        <Route path="/about" element={<AboutPage isDark={isDark} />} />
+        <Route path="/contact" element={<ContactPage isDark={isDark} />} />
       </Routes>
       
-      {/* แสดง Footer เฉพาะหน้าที่ไม่ใช่หน้าแรก (หน้าแรกมี Footer อยู่ใน ScrollControls แล้ว) */}
-      {!isHomePage && <Footer />}
+      {/* แสดง Footer - z-0 เพื่อให้ modal ที่มี z-50 ทับได้ */}
+      {!isHomePage && location.pathname !== '/services' && (
+        <div className="relative z-0">
+          <Footer />
+        </div>
+      )}
     </div>
   );
 }
